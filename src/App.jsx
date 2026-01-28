@@ -1,8 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./styles/app.css";
 import { makePlayerTeam, makeEnemyTeam } from "./game/seed.js";
 import { expNeed } from "./game/balance.js";
 import { buildBattleActions } from "./game/engine.js";
+
+const SAVE_KEY = "turn_based_monsters_save_v1";
+const DEFAULT_LEVELS = { attacker: 1, tank: 1, healer: 1 };
 
 const DEFAULT_NAMES = {
   attacker: "斬手",
@@ -17,12 +20,46 @@ const ROLE_LABEL = {
 };
 
 export default function App() {
-  const [levels, setLevels] = useState({ attacker: 1, tank: 1, healer: 1 });
-  const [sharedExp, setSharedExp] = useState(0);
+  // ====== 先載入存檔（沒有就用預設） ======
+  const [levels, setLevels] = useState(() => {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return DEFAULT_LEVELS;
+    try {
+      return JSON.parse(raw).levels ?? DEFAULT_LEVELS;
+    } catch {
+      return DEFAULT_LEVELS;
+    }
+  });
 
-  // ✅ 敵方難度等級：只有勝利才上升；輸了不變
-  const [enemyTier, setEnemyTier] = useState(1);
+  const [sharedExp, setSharedExp] = useState(() => {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return 0;
+    try {
+      const v = JSON.parse(raw).sharedExp ?? 0;
+      return Number.isFinite(v) ? v : 0;
+    } catch {
+      return 0;
+    }
+  });
 
+  const [enemyTier, setEnemyTier] = useState(() => {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return 1;
+    try {
+      const v = JSON.parse(raw).enemyTier ?? 1;
+      return Number.isFinite(v) ? v : 1;
+    } catch {
+      return 1;
+    }
+  });
+
+  // ✅ 自動存檔：levels / EXP / Tier 任一變動就寫入
+  useEffect(() => {
+    const saveData = { levels, sharedExp, enemyTier };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+  }, [levels, sharedExp, enemyTier]);
+
+  // ====== 其他狀態 ======
   const [isPlaying, setIsPlaying] = useState(false);
   const [log, setLog] = useState([]);
 
@@ -39,12 +76,12 @@ export default function App() {
   const [floaters, setFloaters] = useState([]); // {id, unitId, text, kind}
   const floaterIdRef = useRef(1);
 
+  // ====== 隊伍 ======
   const playerTeam = useMemo(() => {
     const team = makePlayerTeam(levels, DEFAULT_NAMES);
     return team.map((u) => ({ ...u, hp: u.maxHp }));
   }, [levels]);
 
-  // 等待顯示的敵人（只是畫面）：用目前 enemyTier 生成
   const waitingEnemyTeam = useMemo(() => {
     return makeEnemyTeam(enemyTier).map((u) => ({ ...u, hp: u.maxHp }));
   }, [enemyTier]);
@@ -52,6 +89,7 @@ export default function App() {
   const showPlayer = battleTeams?.player ?? playerTeam;
   const showEnemy = battleTeams?.enemy ?? waitingEnemyTeam;
 
+  // ====== 小工具 ======
   function addFloater(unitId, text, kind) {
     const id = floaterIdRef.current++;
     setFloaters((prev) => [...prev, { id, unitId, text, kind }]);
@@ -60,26 +98,41 @@ export default function App() {
     }, 720);
   }
 
+  // ====== 升級 ======
   function handleLevelUp(role) {
     if (isPlaying) return;
+
     const need = expNeed(levels[role]);
     if (sharedExp < need) return;
 
     setSharedExp((e) => e - need);
     setLevels((lv) => ({ ...lv, [role]: lv[role] + 1 }));
+    // ✅ 自動存檔會由 useEffect 觸發
   }
 
+  // ====== 重置（含清掉 localStorage） ======
   function handleResetProgress() {
     if (isPlaying) return;
-    setLevels({ attacker: 1, tank: 1, healer: 1 });
+
+    localStorage.removeItem(SAVE_KEY); // ✅ 清掉存檔
+
+    setLevels(DEFAULT_LEVELS);
     setSharedExp(0);
     setEnemyTier(1);
+
     setLog([]);
     setBattleTeams(null);
-    setHighlight({ actorId: null, targetId: null, type: null, actorSide: null, targetSide: null });
+    setHighlight({
+      actorId: null,
+      targetId: null,
+      type: null,
+      actorSide: null,
+      targetSide: null,
+    });
     setFloaters([]);
   }
 
+  // ====== 開戰（每次新戰鬥） ======
   function handleFight() {
     if (isPlaying) return;
 
@@ -89,9 +142,7 @@ export default function App() {
     setHighlight({ actorId: null, targetId: null, type: null, actorSide: null, targetSide: null });
 
     const playerBattle = playerTeam.map((u) => ({ ...u, hp: u.maxHp }));
-
-    // ✅ 每次按打怪：全新敵人，但強度固定由 enemyTier 決定（輸了不變）
-    const enemyBattle = makeEnemyTeam(enemyTier);
+    const enemyBattle = makeEnemyTeam(enemyTier); // ✅ 敵方強度由 enemyTier 決定
 
     setBattleTeams({ player: playerBattle, enemy: enemyBattle });
 
@@ -112,7 +163,7 @@ export default function App() {
 
         setSharedExp((e) => e + gainedExp);
 
-        // ✅ 只有勝利才提升敵方難度
+        // ✅ 只有勝利才提升敵方難度（輸了不變）
         if (win) setEnemyTier((t) => t + 1);
 
         setIsPlaying(false);
@@ -156,12 +207,13 @@ export default function App() {
         return next;
       });
 
-      setTimeout(step, 560);
+      setTimeout(step, 560); // 固定速度
     };
 
     setTimeout(step, 320);
   }
 
+  // ====== UI class ======
   function cardClass(u) {
     let cls = "card";
     if (u.side === "enemy") cls += " enemy";
@@ -185,6 +237,7 @@ export default function App() {
     return Math.max(0, Math.min(100, Math.round((u.hp / u.maxHp) * 100)));
   }
 
+  // ====== 卡片渲染 ======
   function renderCard(u) {
     const myFloaters = floaters.filter((f) => f.unitId === u.id);
 
@@ -192,29 +245,40 @@ export default function App() {
       <div key={u.id} className={cardClass(u)}>
         <div className="cardHead">
           <div className="name">{u.name}</div>
-          <div className="badge">{ROLE_LABEL[u.role]} Lv.{u.level}</div>
+          <div className="badge">
+            {ROLE_LABEL[u.role]} Lv.{u.level}
+          </div>
         </div>
 
         <div className="row">
           <span>HP</span>
-          <span>{u.hp}/{u.maxHp}</span>
+          <span>
+            {u.hp}/{u.maxHp}
+          </span>
         </div>
 
         <div className="hpbar">
           <div className="hpfill" style={{ width: `${hpPct(u)}%` }} />
         </div>
 
-        <div className="row"><span>ATK</span><span>{u.atk}</span></div>
-        <div className="row"><span>DEF</span><span>{u.def}</span></div>
-        {u.role === "healer" && <div className="row"><span>HEAL</span><span>{u.heal}</span></div>}
+        <div className="row">
+          <span>ATK</span>
+          <span>{u.atk}</span>
+        </div>
+        <div className="row">
+          <span>DEF</span>
+          <span>{u.def}</span>
+        </div>
+        {u.role === "healer" && (
+          <div className="row">
+            <span>HEAL</span>
+            <span>{u.heal}</span>
+          </div>
+        )}
 
         {u.side === "player" && (
           <>
-            <button
-              className="btn"
-              onClick={() => handleLevelUp(u.role)}
-              disabled={isPlaying || sharedExp < expNeed(levels[u.role])}
-            >
+            <button className="btn" onClick={() => handleLevelUp(u.role)} disabled={isPlaying || sharedExp < expNeed(levels[u.role])}>
               升級（需 EXP {expNeed(levels[u.role])}）
             </button>
             <div className="hint">共用 EXP：{sharedExp}</div>
@@ -232,6 +296,7 @@ export default function App() {
     );
   }
 
+  // ====== 畫面 ======
   return (
     <div className="app">
       <h1 className="title">Turn-based combat</h1>
@@ -254,7 +319,9 @@ export default function App() {
 
         <div className="side">
           <div className="bar">
-            <div className="exp">EXP：<b>{sharedExp}</b></div>
+            <div className="exp">
+              EXP：<b>{sharedExp}</b>
+            </div>
             <div className="barBtns">
               <button className="btn primary" onClick={handleFight} disabled={isPlaying}>
                 打怪（新戰鬥）
@@ -271,7 +338,11 @@ export default function App() {
               {log.length === 0 ? (
                 <div className="muted">按「打怪」開始一場全新戰鬥</div>
               ) : (
-                log.map((t, i) => <div key={i} className="logLine">{t}</div>)
+                log.map((t, i) => (
+                  <div key={i} className="logLine">
+                    {t}
+                  </div>
+                ))
               )}
             </div>
           </div>
