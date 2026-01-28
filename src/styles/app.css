@@ -1,0 +1,313 @@
+:root {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0b0e14;
+  color: #e9eef7;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.sub {
+  opacity: 0.85;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.top {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 14px;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.panel {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+}
+
+.panelTitle {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.card {
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.04);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.card.enemy {
+  opacity: 0.96;
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.name {
+  font-weight: 800;
+}
+
+.badge {
+  font-size: 12px;
+  opacity: 0.85;
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  opacity: 0.9;
+  font-size: 13px;
+}
+
+/* HP bar */
+.hpbar{
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+  margin: 2px 0 6px;
+}
+.hpfill{
+  height: 100%;
+  background: rgba(255,255,255,0.45);
+  transition: width 280ms ease;
+}
+
+/* Buttons */
+.btn {
+  margin-top: auto;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: #e9eef7;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: rgba(255,255,255,0.14);
+}
+
+.btn.danger {
+  background: rgba(255, 70, 70, 0.14);
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-top: 6px;
+}
+
+/* Side */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.barBtns {
+  display: flex;
+  gap: 8px;
+}
+
+.exp {
+  font-size: 14px;
+}
+
+.log {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+}
+
+.logTitle {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.logBody {
+  max-height: 420px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  opacity: 0.9;
+}
+
+.logLine {
+  padding: 2px 0;
+}
+
+.muted {
+  opacity: 0.6;
+}
+
+.note {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+}
+
+.noteTitle {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.noteBody {
+  font-size: 13px;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+/* === 動畫：行動/被打/被補 === */
+.card.acting {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.18);
+}
+
+/* ✅ 整張卡衝出去打 */
+.card.dash-right {
+  animation: dashRight 320ms ease;
+  z-index: 3;
+}
+.card.dash-left {
+  animation: dashLeft 320ms ease;
+  z-index: 3;
+}
+/* 治療：小幅向上靠近一下 */
+.card.dash-heal {
+  animation: dashHeal 260ms ease;
+  z-index: 3;
+}
+
+@keyframes dashRight {
+  0% { transform: translateX(0) scale(1.00); }
+  45% { transform: translateX(70px) scale(1.03); }
+  100% { transform: translateX(0) scale(1.00); }
+}
+
+@keyframes dashLeft {
+  0% { transform: translateX(0) scale(1.00); }
+  45% { transform: translateX(-70px) scale(1.03); }
+  100% { transform: translateX(0) scale(1.00); }
+}
+
+@keyframes dashHeal {
+  0% { transform: translateY(0) scale(1.00); }
+  45% { transform: translateY(-10px) scale(1.02); }
+  100% { transform: translateY(0) scale(1.00); }
+}
+
+.card.targeted {
+  animation: hitShake 220ms ease;
+  border-color: rgba(255, 80, 80, 0.55);
+}
+
+.card.healed {
+  border-color: rgba(80, 255, 170, 0.45);
+  box-shadow: 0 0 0 2px rgba(80, 255, 170, 0.10);
+}
+
+@keyframes hitShake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+/* 飄字 */
+.floatLayer{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floater{
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  font-size: 18px;
+  opacity: 0;
+  animation: floatUpFade 720ms ease forwards;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.45);
+}
+
+.floater.dmg{
+  color: rgba(255, 120, 120, 0.95);
+}
+
+.floater.heal{
+  color: rgba(120, 255, 190, 0.95);
+}
+
+@keyframes floatUpFade{
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+  18% { opacity: 1; transform: translate(-50%, -62%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -98%) scale(1.02); }
+}
+
+@media (max-width: 1050px) {
+  .top { grid-template-columns: 1fr; }
+  .panels { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr; }
+}
